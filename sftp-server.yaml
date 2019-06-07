@@ -1,0 +1,69 @@
+---
+Description: ""
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  ASI:
+    Type: String
+    MinLength: 2
+    MaxLength: 5
+    Description: "asi - must be lower-case, limit 4 characters"
+    AllowedPattern: "[a-z]*"
+  Environment:
+    Type: String
+    MinLength: 3
+    MaxLength: 7
+    Description: "environment (nonprod|dev|itg|cat|prod) - must be lower-case, limit 7 characters"
+    AllowedPattern: "[a-z]*"
+  Owner:
+    Type: String
+    Description: "email address of the the Owner of this stack"
+    Default: "phillips.james@gmail.com"
+    AllowedPattern: "^[\\w-\\+]+(\\.[\\w]+)*@[\\w-]+(\\.[\\w]+)*(\\.[a-z]{2,})$"
+Resources:
+  SftpLogRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - transfer.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+  SftpLogRolePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: SftpLogPolicy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - cloudwatch:PutMetricData
+          Resource: "*"
+        - Effect: Allow
+          Action:
+          - logs:CreateLogGroup
+          - logs:CreateLogStream
+          - logs:DescribeLogStreams
+          - logs:PutLogEvents         
+          Resource: 'arn:aws:logs:*:*:*'
+      Roles:
+      - !Ref SftpLogRole
+
+  SftpServer:
+    Type: AWS::Transfer::Server
+    Properties: 
+      EndpointType: PUBLIC
+      LoggingRole: !GetAtt SftpLogRole.Arn
+      Tags: 
+        - Key: Owner
+          Value: !Ref Owner
+        - Key: ASI
+          Value: !Ref ASI
+        - Key: Environment
+          Value: !Ref Environment
+
