@@ -77,10 +77,10 @@ Resources:
           - Effect: Allow
             Principal:
               Service:
-                - vpc-flow-logs.amazonaws.com
+                - transfer.amazonaws.com
             Action: 'sts:AssumeRole'
       Policies:
-        - PolicyName: flowlogs-policy
+        - PolicyName: s3
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -88,7 +88,10 @@ Resources:
                 Action:
                   - 's3:ListBucket'
                   - 's3:GetBucketLocation'
-                Resource: 'arn:aws:s3:::$bucketname' #fix this with proper ref
+                Resource: !Join
+                  - ''
+                  - -  'arn:aws:s3:::'
+                    -  !Ref SshUserBucket
               - Effect: Allow
                 Action:
                   - 's3:PutObject'
@@ -98,11 +101,15 @@ Resources:
                   - 's3:GetObjectVersion'
                   - 's3:GetObjectACL'
                   - 's3:PutObjectACL'
-                Resource: 'arn:aws:s3:::$bucketname/*' #fix this with proper ref
+                Resource: !Join
+                  - ''
+                  - -  'arn:aws:s3:::'
+                    -  !Ref SshUserBucket
+                    -  '/*'
   SshUser:
     Type: AWS::Transfer::User
     Properties: 
-      HomeDirectory: !Ref SshUserBucket
+      HomeDirectory: !Sub '${SshUserBucket}/${UserName}'
       Role: !GetAtt SshUserBucketRole.Arn
       ServerId: !Ref ServerId
       SshPublicKeys: 
