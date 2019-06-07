@@ -1,0 +1,114 @@
+---
+Description: ""
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  ASI:
+    Type: String
+    MinLength: 2
+    MaxLength: 5
+    Description: "asi - must be lower-case, limit 4 characters"
+    AllowedPattern: "[a-z]*"
+  Environment:
+    Type: String
+    MinLength: 3
+    MaxLength: 7
+    Description: "environment (nonprod|dev|itg|cat|prod) - must be lower-case, limit 7 characters"
+    AllowedPattern: "[a-z]*"
+  Owner:
+    Type: String
+    Description: "email address of the the Owner of this stack"
+    Default: "phillips.james@gmail.com"
+    AllowedPattern: "^[\\w-\\+]+(\\.[\\w]+)*@[\\w-]+(\\.[\\w]+)*(\\.[a-z]{2,})$"
+  UserName:
+    Type: String
+    MinLength: 5
+    MaxLength: 24
+    Description: "Account User Name - must be lower-case, 5-24 characters only alpha"
+    AllowedPattern: "[a-z]*"
+  SshPublicKey:
+    Type: String
+  ServerId:
+    Type: String
+    AllowedPattern: '^s-([0-9a-f]{17})$'
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - 
+      Label:
+        default: "Environment Configuration"
+      Parameters:
+        - ASI
+        - Environment
+        - Owner
+    -
+      Label: 
+        default: "Account Configuration"
+      Parameters:
+        - UserName
+        - SshPublicKey
+        - ServerId
+
+Resources:
+  SshUserBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join
+      - '-'
+      - -  !Ref ASI
+        -  !Ref 'AWS::Region'
+        -  !Ref UserName
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        -
+          Key: "Owner"
+          Value: !Ref Owner
+  SshUserBucketRole: #This is not completed yet
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - vpc-flow-logs.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: flowlogs-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:ListBucket'
+                  - 's3:GetBucketLocation'
+                Resource: 'arn:aws:s3:::$bucketname' #fix this with proper ref
+              - Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                  - 's3:GetObject'
+                  - 's3:DeleteObject'
+                  - 's3:DeleteObjectVersion'
+                  - 's3:GetObjectVersion'
+                  - 's3:GetObjectACL'
+                  - 's3:PutObjectACL'
+                Resource: 'arn:aws:s3:::$bucketname/*' #fix this with proper ref
+  SshUser:
+    Type: AWS::Transfer::User
+    Properties: 
+      HomeDirectory: !Ref SshUserBucket
+      Role: !GetAtt SshUserBucketRole.Arn
+      ServerId: !Ref ServerId
+      SshPublicKeys: 
+        - !Ref SshPublicKey
+      Tags: 
+        - Key: Owner
+          Value: !Ref Owner
+      UserName: !Ref UserName
+

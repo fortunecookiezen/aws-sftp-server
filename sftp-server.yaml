@@ -19,6 +19,16 @@ Parameters:
     Description: "email address of the the Owner of this stack"
     Default: "phillips.james@gmail.com"
     AllowedPattern: "^[\\w-\\+]+(\\.[\\w]+)*@[\\w-]+(\\.[\\w]+)*(\\.[a-z]{2,})$"
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - 
+      Label:
+        default: "Environment Configuration"
+      Parameters:
+        - ASI
+        - Environment
+        - Owner
 Resources:
   SftpLogRole:
     Type: AWS::IAM::Role
