@@ -19,6 +19,16 @@ Parameters:
     Description: "email address of the the Owner of this stack"
     Default: "phillips.james@gmail.com"
     AllowedPattern: "^[\\w-\\+]+(\\.[\\w]+)*@[\\w-]+(\\.[\\w]+)*(\\.[a-z]{2,})$"
+  BusinessOwnerContact:
+    Type: String
+    Description: "Contact address of the the Business Owner of this trading relationship"
+    Default: "phillips.james@gmail.com"
+    AllowedPattern: "^[\\w-\\+]+(\\.[\\w]+)*@[\\w-]+(\\.[\\w]+)*(\\.[a-z]{2,})$"
+  RemoteOrganizationContact:
+    Type: String
+    Description: "Contact address of the the Remote User"
+    Default: "phillips.james@gmail.com"
+    AllowedPattern: "^[\\w-\\+]+(\\.[\\w]+)*@[\\w-]+(\\.[\\w]+)*(\\.[a-z]{2,})$"
   UserName:
     Type: String
     MinLength: 5
@@ -45,18 +55,21 @@ Metadata:
         default: "Account Configuration"
       Parameters:
         - UserName
-        - SshPublicKey
+        - BusinessOwnerContact
+        - RemoteOrganizationContact
         - ServerId
+        - SshPublicKey
 
 Resources:
-  SshUserBucket:
+  SftpBucket:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Join
       - '-'
-      - -  !Ref ASI
-        -  !Ref 'AWS::Region'
-        -  !Ref UserName
+      - - !Ref ASI
+        - !Ref Environment
+        - !Ref 'AWS::Region'
+        - 'sftp-bucket'
       AccessControl: Private
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -68,7 +81,7 @@ Resources:
         -
           Key: "Owner"
           Value: !Ref Owner
-  SshUserBucketRole: #This is not completed yet
+  SftpBucketRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -80,7 +93,7 @@ Resources:
                 - transfer.amazonaws.com
             Action: 'sts:AssumeRole'
       Policies:
-        - PolicyName: s3
+        - PolicyName: sftp-s3-bucket-access-policy
           PolicyDocument:
             Version: 2012-10-17
             Statement:
@@ -91,7 +104,7 @@ Resources:
                 Resource: !Join
                   - ''
                   - -  'arn:aws:s3:::'
-                    -  !Ref SshUserBucket
+                    -  !Ref SftpBucket
               - Effect: Allow
                 Action:
                   - 's3:PutObject'
@@ -104,18 +117,20 @@ Resources:
                 Resource: !Join
                   - ''
                   - -  'arn:aws:s3:::'
-                    -  !Ref SshUserBucket
+                    -  !Ref SftpBucket
                     -  '/*'
   SshUser:
     Type: AWS::Transfer::User
     Properties: 
-      HomeDirectory: !Sub '${SshUserBucket}/${UserName}'
-      Role: !GetAtt SshUserBucketRole.Arn
+      HomeDirectory: !Sub '/${SftpBucket}/${UserName}'
+      Role: !GetAtt SftpBucketRole.Arn
       ServerId: !Ref ServerId
       SshPublicKeys: 
         - !Ref SshPublicKey
       Tags: 
-        - Key: Owner
-          Value: !Ref Owner
+        - Key: BusinessOwnerContact
+          Value: !Ref BusinessOwnerContact
+        - Key: ContactEmail
+          Value: !Ref RemoteOrganizationContact
       UserName: !Ref UserName
 
