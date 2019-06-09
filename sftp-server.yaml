@@ -30,7 +30,7 @@ Metadata:
         - Environment
         - Owner
 Resources:
-  SftpLogRole:
+  SftpServerLogRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
@@ -45,11 +45,12 @@ Resources:
       Path: "/"
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AWSTransferLoggingAccess'
+        - 'arn:aws:iam::aws:policy/CloudWatchFullAccess'
   SftpServer:
     Type: AWS::Transfer::Server
     Properties: 
       EndpointType: PUBLIC
-      LoggingRole: !GetAtt SftpLogRole.Arn
+      LoggingRole: !GetAtt SftpServerLogRole.Arn
       Tags: 
         - Key: Owner
           Value: !Ref Owner
