@@ -1,0 +1,92 @@
+---
+Description: "creates s3 bucket and iam role for aws::Transfer sftp server"
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  ASI:
+    Type: String
+    MinLength: 2
+    MaxLength: 5
+    Description: "asi - must be lower-case, limit 4 characters"
+    AllowedPattern: "[a-z]*"
+  Environment:
+    Type: String
+    MinLength: 3
+    MaxLength: 7
+    Description: "environment (nonprod|dev|itg|cat|prod) - must be lower-case, limit 7 characters"
+    AllowedPattern: "[a-z]*"
+  Owner:
+    Type: String
+    Description: "email address of the the Owner of this stack"
+    Default: "phillips.james@gmail.com"
+    AllowedPattern: "^[\\w-\\+]+(\\.[\\w]+)*@[\\w-]+(\\.[\\w]+)*(\\.[a-z]{2,})$"
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - 
+      Label:
+        default: "Environment Configuration"
+      Parameters:
+        - ASI
+        - Environment
+        - Owner
+Resources:
+  SftpBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join
+      - '-'
+      - - !Ref ASI
+        - !Ref Environment
+        - !Ref 'AWS::Region'
+        - 'sftp-bucket'
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        -
+          Key: "Owner"
+          Value: !Ref Owner
+  SftpBucketRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - transfer.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        - PolicyName: sftp-s3-bucket-access-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:ListBucket'
+                  - 's3:GetBucketLocation'
+                Resource: !Join
+                  - ''
+                  - -  'arn:aws:s3:::'
+                    -  !Ref SftpBucket
+              - Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                  - 's3:GetObject'
+                  - 's3:DeleteObject'
+                  - 's3:DeleteObjectVersion'
+                  - 's3:GetObjectVersion'
+                  - 's3:GetObjectACL'
+                  - 's3:PutObjectACL'
+                Resource: !Join
+                  - ''
+                  - -  'arn:aws:s3:::'
+                    -  !Ref SftpBucket
+                    -  '/*'
+
+
