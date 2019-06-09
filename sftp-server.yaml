@@ -43,27 +43,8 @@ Resources:
           Action:
           - sts:AssumeRole
       Path: "/"
-  SftpLogRolePolicy:
-    Type: AWS::IAM::Policy
-    Properties:
-      PolicyName: SftpLogPolicy
-      PolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-        - Effect: Allow
-          Action:
-          - cloudwatch:PutMetricData
-          Resource: "*"
-        - Effect: Allow
-          Action:
-          - logs:CreateLogGroup
-          - logs:CreateLogStream
-          - logs:DescribeLogStreams
-          - logs:PutLogEvents         
-          Resource: 'arn:aws:logs:*:*:*'
-      Roles:
-      - !Ref SftpLogRole
-
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSTransferLoggingAccess'
   SftpServer:
     Type: AWS::Transfer::Server
     Properties: 
@@ -76,4 +57,9 @@ Resources:
           Value: !Ref ASI
         - Key: Environment
           Value: !Ref Environment
-
+Outputs:
+  SftpServer:
+    Description: "sftp server instance id"
+    Value: !GetAtt SftpServer.ServerId
+    Export:
+      Name: !Sub '${AWS::StackName}-SftpServerId'
