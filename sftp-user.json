@@ -1,0 +1,250 @@
+{
+    "Description": "Creates an s3 bucket and an sftp user",
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Parameters": {
+        "ASI": {
+            "Type": "String",
+            "MinLength": 2,
+            "MaxLength": 5,
+            "Description": "asi - must be lower-case, limit 5 characters",
+            "AllowedPattern": "[a-z]*"
+        },
+        "Environment": {
+            "Type": "String",
+            "MinLength": 3,
+            "MaxLength": 7,
+            "Description": "environment (nonprod|dev|itg|cat|prod) - must be lower-case, limit 7       characters",
+            "AllowedPattern": "[a-z]*"
+        },
+        "Owner": {
+            "Type": "String",
+            "Description": "email address of the the Owner of this stack",
+            "Default": "phillips.james@gmail.com",
+            "AllowedPattern": "^[\\w-\\+]+(\\.[\\w]+)*@[\\w-]+(\\.[\\w]+)*(\\.[a-z]{2,})$"
+        },
+        "BusinessOwnerContact": {
+            "Type": "String",
+            "Description": "Contact address of the the Business Owner of this trading relationship",
+            "Default": "phillips.james@gmail.com",
+            "AllowedPattern": "^[\\w-\\+]+(\\.[\\w]+)*@[\\w-]+(\\.[\\w]+)*(\\.[a-z]{2,})$"
+        },
+        "RemoteOrganizationContact": {
+            "Type": "String",
+            "Description": "Contact address of the the Remote User",
+            "Default": "phillips.james@gmail.com",
+            "AllowedPattern": "^[\\w-\\+]+(\\.[\\w]+)*@[\\w-]+(\\.[\\w]+)*(\\.[a-z]{2,})$"
+        },
+        "BucketName": {
+            "Type": "String",
+            "MinLength": 2,
+            "MaxLength": 10,
+            "Description": "Bucket Name - alphanumeric, lower-case, maximum 10 chars",
+            "AllowedPattern": "[0-9a-z]*"
+        },
+        "RemoteUserName": {
+            "Type": "String",
+            "MinLength": 5,
+            "MaxLength": 32,
+            "Description": "Account User Name",
+            "AllowedPattern": "^[a-z_]([a-z0-9_-]{0,31}|[a-z0-9_-]{0,30}\\$)$"
+        },
+        "RemoteUserSshPublicKey": {
+            "Type": "String"
+        },
+        "AwsServerId": {
+            "Type": "String",
+            "AllowedPattern": "^s-([0-9a-f]{17})$"
+        }
+    },
+    "Metadata": {
+        "AWS::CloudFormation::Interface": {
+            "ParameterGroups": [
+                {
+                    "Label": {
+                        "default": "Environment Configuration"
+                    },
+                    "Parameters": [
+                        "ASI",
+                        "Environment",
+                        "Owner"
+                    ]
+                },
+                {
+                    "Label": {
+                        "default": "Account Configuration"
+                    },
+                    "Parameters": [
+                        "BucketName",
+                        "RemoteUserName",
+                        "BusinessOwnerContact",
+                        "RemoteOrganizationContact",
+                        "AwsServerId",
+                        "RemoteUserSshPublicKey"
+                    ]
+                }
+            ]
+        }
+    },
+    "Resources": {
+        "SftpBucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            {
+                                "Ref": "ASI"
+                            },
+                            {
+                                "Ref": "AWS::Region"
+                            },
+                            "sftp",
+                            {
+                                "Ref": "BucketName"
+                            }
+                        ]
+                    ]
+                },
+                "AccessControl": "Private",
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": [
+                        {
+                            "ServerSideEncryptionByDefault": {
+                                "SSEAlgorithm": "AES256"
+                            }
+                        }
+                    ]
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                },
+                "Tags": [
+                    {
+                        "Key": "Owner",
+                        "Value": {
+                            "Ref": "Owner"
+                        }
+                    },
+                    {
+                        "Key": "Environment",
+                        "Value": {
+                            "Ref": "Environment"
+                        }
+                    }
+                ]
+            }
+        },
+        "SftpBucketUserRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "transfer.amazonaws.com"
+                                ]
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "Policies": [
+                    {
+                        "PolicyName": "sftp-s3-bucket-access-policy",
+                        "PolicyDocument": {
+                            "Version": "2012-10-17",
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "s3:ListBucket",
+                                        "s3:GetBucketLocation"
+                                    ],
+                                    "Resource": {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "arn:aws:s3:::",
+                                                {
+                                                    "Ref": "SftpBucket"
+                                                }
+                                            ]
+                                        ]
+                                    }
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "s3:PutObject",
+                                        "s3:GetObject",
+                                        "s3:DeleteObject",
+                                        "s3:DeleteObjectVersion",
+                                        "s3:GetObjectVersion",
+                                        "s3:GetObjectACL",
+                                        "s3:PutObjectACL"
+                                    ],
+                                    "Resource": {
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "arn:aws:s3:::",
+                                                {
+                                                    "Ref": "SftpBucket"
+                                                },
+                                                "/*"
+                                            ]
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "RemoteSshUser": {
+            "Type": "AWS::Transfer::User",
+            "Properties": {
+                "HomeDirectory": {
+                    "Fn::Sub": "/${SftpBucket}/${RemoteUserName}"
+                },
+                "Role": {
+                    "Fn::GetAtt": [
+                        "SftpBucketUserRole",
+                        "Arn"
+                    ]
+                },
+                "Policy": "{\r\n  \"Version\": \"2012-10-17\",\r\n  \"Statement\": [\r\n      {\r\n          \"Sid\": \"AllowListingOfUserFolder\",\r\n          \"Action\": [\r\n              \"s3:ListBucket\"\r\n          ],\r\n          \"Effect\": \"Allow\",\r\n          \"Resource\": [\r\n              \"arn:aws:s3:::${transfer:HomeBucket}\"\r\n          ],\r\n          \"Condition\": {\r\n              \"StringLike\": {\r\n                  \"s3:prefix\": [\r\n                      \"${transfer:HomeFolder}/*\",\r\n                      \"${transfer:HomeFolder}\"\r\n                  ]\r\n              }\r\n          }\r\n      },\r\n      {\r\n          \"Sid\": \"HomeDirObjectAccess\",\r\n          \"Effect\": \"Allow\",\r\n          \"Action\": [\r\n              \"s3:PutObject\",\r\n              \"s3:GetObject\",\r\n              \"s3:DeleteObjectVersion\",\r\n              \"s3:DeleteObject\",\r\n              \"s3:GetObjectVersion\",\r\n              \"s3:GetObjectACL\",\r\n              \"s3:PutObjectACL\"\r\n          ],\r\n          \"Resource\": \"arn:aws:s3:::${transfer:HomeDirectory}*\"\r\n       }\r\n  ]\r\n}",
+                "ServerId": {
+                    "Ref": "AwsServerId"
+                },
+                "SshPublicKeys": [
+                    {
+                        "Ref": "RemoteUserSshPublicKey"
+                    }
+                ],
+                "Tags": [
+                    {
+                        "Key": "BusinessOwnerContact",
+                        "Value": {
+                            "Ref": "BusinessOwnerContact"
+                        }
+                    },
+                    {
+                        "Key": "ContactEmail",
+                        "Value": {
+                            "Ref": "RemoteOrganizationContact"
+                        }
+                    }
+                ],
+                "UserName": {
+                    "Ref": "RemoteUserName"
+                }
+            }
+        }
+    }
+}

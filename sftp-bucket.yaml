@@ -50,7 +50,7 @@ Resources:
         -
           Key: "Owner"
           Value: !Ref Owner
-  SftpBucketRole:
+  SftpBucketUserRole:
     Type: AWS::IAM::Role
     Properties:
       AssumeRolePolicyDocument:
