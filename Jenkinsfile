@@ -3,12 +3,12 @@ pipeline {
     stages {
         stage('build') {
             steps {
-                sh 'python --version'
+                sh 'pip install cfn-lint'
             }
         }
         stage('test') {
             steps {
-                sh 'echo "I am the test stage"'
+                sh 'cfn-lint *.yaml'
             }
         }
         stage('deploy') {
