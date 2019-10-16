@@ -1,20 +1,23 @@
 pipeline {
     agent { docker { image 'python:3.7.4' } }
     stages {
-        stage('build') {
+        stage('validate') {
             steps {
                 sh 'pip install cfn-lint awscli'
-                sh 'aws --version'
+                sh 'cfn-lint *.yaml'
             }
         }
-        stage('test') {
+        stage('stage') {
             steps {
-                sh 'cfn-lint *.yaml'
+                sh 'aws --version'
             }
         }
         stage('deploy') {
             steps {
-                sh 'echo "I am the deploy stage"'
+                sh '''
+                    echo "aws s3 cp **/* "
+                    ls -l
+                '''
             }
         }
     }
