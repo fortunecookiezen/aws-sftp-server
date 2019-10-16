@@ -3,7 +3,8 @@ pipeline {
     stages {
         stage('build') {
             steps {
-                sh 'pip install cfn-lint'
+                sh 'pip install cfn-lint awscli'
+                sh 'aws --version'
             }
         }
         stage('test') {
