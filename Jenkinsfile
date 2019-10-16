@@ -16,7 +16,7 @@ pipeline {
             steps {
                 sh '''
                     echo "aws s3 cp **/* "
-                    ls -l
+                    ls -l 
                 '''
             }
         }
