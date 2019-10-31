@@ -11,21 +11,9 @@ There are two parts to this:
 
 Apply the template _sftp-server.yaml_ in your account. It creates an AWS Transfer sftp server instance and an IAM role for logging that uses the AWSTransferLoggingAccess and CloudWatchFullAccess aws-managed policies.
 
-## Creating the S3 Bucket
+## Creating the S3 Bucket and AWS Transfer users
 
 Apply the template _sftp-user.yaml_ in your account. It creates an S3 bucket, an sftp bucket user role, and an AWS Transfer user with a proper scope down policy limiting the user's access to the new bucket. To create the SFTP user, you will need the user's public key.
-
-# old notes left for context, I'll clean this up later.
-
-## Create the scope down policy
-
-createScopeDownPolicy.sh and TransferUserScopeDownPolicy.json are used to create an [AWS IAM scope down policy](https://docs.aws.amazon.com/transfer/latest/userguide/users.html#users-policies-scope-down) as recommended for optimal user security.
-
-edit _createScopeDownPolicy.sh and set your region, then execute the script passing the account profile for the account you are using.
-
-## Creating Transfer Users
-
-## Applying Scope Down Policy to Users
 
 ## Current Status
 
@@ -37,3 +25,11 @@ edit _createScopeDownPolicy.sh and set your region, then execute the script pass
 * ~Add S3 Bucket Creation example~
 * ~Add Transfer::User creation example~
 * ~Add exports to the stack so that users and buckets can be split from server~
+
+# _old notes left for context, I'll clean this up later._
+
+## Create the scope down policy
+
+createScopeDownPolicy.sh and TransferUserScopeDownPolicy.json are used to create an [AWS IAM scope down policy](https://docs.aws.amazon.com/transfer/latest/userguide/users.html#users-policies-scope-down) as recommended for optimal user security.
+
+edit _createScopeDownPolicy.sh and set your region, then execute the script passing the account profile for the account you are using.
