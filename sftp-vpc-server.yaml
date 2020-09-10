@@ -1,0 +1,85 @@
+---
+Description: >
+  Creates an SFTP server inside a VPC using private addresses for all of you hybrid cloud network peeps.
+  If you want this implementation to use public ips, then modify template to provide elastic ip allocation
+  ids in the endpoint details block
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  ASI:
+    Type: String
+    MinLength: 2
+    MaxLength: 5
+    Description: "asi - must be lower-case, limit 5 characters"
+    AllowedPattern: "[a-z]*"
+  Environment:
+    Type: String
+    MinLength: 3
+    MaxLength: 7
+    Description: "environment (nonprod|dev|itg|cat|prod) - must be lower-case, limit 7 characters"
+    AllowedPattern: "[a-z]*"
+  Owner:
+    Type: String
+    Description: "email address of the the Owner of this stack"
+    Default: "phillips.james@gmail.com"
+    AllowedPattern: "^[\\w-\\+]+(\\.[\\w]+)*@[\\w-]+(\\.[\\w]+)*(\\.[a-z]{2,})$"
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  SubnetId:
+    Type: List<AWS::EC2::Subnet::Id>
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - 
+      Label:
+        default: "Environment Configuration"
+      Parameters:
+        - ASI
+        - Environment
+        - Owner
+    - 
+      Label: 
+        default: "VPC Configuration"
+      Parameters:
+        - VpcId
+        - SubnetId
+Resources:
+  SftpServerLogRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - transfer.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSTransferLoggingAccess'
+        - 'arn:aws:iam::aws:policy/CloudWatchFullAccess'
+  SftpServer:
+    Type: AWS::Transfer::Server
+    Properties: 
+      EndpointType: VPC
+      EndpointDetails:
+        SubnetIds: !Ref SubnetId
+        VpcId: !Ref VpcId
+      IdentityProviderType: SERVICE_MANAGED
+      LoggingRole: !GetAtt SftpServerLogRole.Arn
+      Protocols:
+        - SFTP
+      Tags: 
+        - Key: Owner
+          Value: !Ref Owner
+        - Key: ASI
+          Value: !Ref ASI
+        - Key: Environment
+          Value: !Ref Environment
+Outputs:
+  SftpServer:
+    Description: "sftp server instance id"
+    Value: !GetAtt SftpServer.ServerId
+
